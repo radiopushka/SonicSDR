@@ -1,7 +1,10 @@
 # Sonic SDR
 ##Software Define "radio", produces a visual waterfall model of interfaces
-You can use it to for example detect certain frequnecies in audio. If you have a sound card(or a device recognized by Alsa) that is able to sample at higher frequencies, you can use it for various other purposes. To do this, you need to add the V option ./ftaudio V <audio device> \[sample rate\] \[ft rate\] the arguments in brackets are optional. typically, your sound card samples at 44100 khz, divide that by two to get the maximum frequency possible.
+You can use it to for example detect certain frequnecies in audio. If you have a sound card(or a device recognized by Alsa) that is able to sample at higher frequencies, you can use it for various other purposes. To do this, you need to add the V option ./ftaudio V <sample rate>  \[audio device\] \[ft rate\] the arguments in brackets are optional. typically, your sound card samples at 44100 khz, divide that by two to get the maximum frequency possible.
 more information if you call ./ftaudio -h
+
+audio device format: hw:CARD,DEVICE
+
 
 Could be use for the reception of VLF and LF signals with proper hardware
 ## Linux Dependencies
