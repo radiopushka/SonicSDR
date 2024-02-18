@@ -4,7 +4,8 @@ You can use it to for example detect certain frequnecies in audio. If you have a
 more information if you call ./ftaudio -h
 
 Could be use for the reception of VLF and LF signals with proper hardware
-
+## Linux Dependencies
+Alsa Pthreads
 ## interface
 It uses a command line ncurses based GUI, some people might hate this while others might love it. You can use the arrow keys to zoom in and out as well as move left right, press 0 to go to frequency 0 and press d for default zoom.
 Press space to pause or unpause the waterfall.
