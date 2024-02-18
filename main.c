@@ -6,9 +6,10 @@
 #include <math.h>
 #include <locale.h>
 #include "cursescolors.c"
+#include "alsaconf.c"
 
 int SIZE=4000;
-int D_SAMPLE=44100;
+unsigned int D_SAMPLE=48000;
 int LOWEST_F=11;
 int FFT_SPEED_SPEC=0;
 #define FFT_SPEED_SINGLE 0 
@@ -134,7 +135,6 @@ void printspect(double* trans,int size){
   }
   mvprintw(LINES-1,0,"gain: %d",(int)amp);
 
-refresh();
 }
 
 void printft(double* trans,int size){
@@ -181,7 +181,7 @@ void init_ft(int argn){
   init_fourier_transform(SIZE,w); 
   bsize=SIZE*2;
   f16convert=malloc(sizeof(int)*SIZE);
-  buffer=malloc(sizeof(char)*bsize);
+  buffer=malloc(sizeof(char)*bsize*2);
 }
 void reset_ft(int direction){
   if(direction==1){
@@ -221,13 +221,6 @@ int main(int argn,char* argv[]){
   }
   argnextrac=argn;
   setlocale(LC_ALL, "");
-  initscr();
-  start_color();
-  noecho();
-  int pause=0;
-  init_colorpairs();
-  nodelay(stdscr, TRUE);
-  keypad(stdscr,TRUE);
   int fftspeed=FFT_SPEED_SPEC;
   if(argn>1&&argv[1][0]=='S'){
     fftspeed=FFT_SPEED_SINGLE;
@@ -237,7 +230,7 @@ int main(int argn,char* argv[]){
   	fftspeed=4;
   }else if(argn>1&&argv[1][0]=='V'){
   	if(argv[2]==NULL){
-  		endwin();
+  	
   		printf("usage, <S> for no waterfall, <U> for ultra sonic, <V> for custom followed by sample rate and optionally the device as well as FT size\n");
   		printf("to find maximum sample rate run: grep -P 'rates|bits' /proc/asound/card0/codec\\#0\n");
   		printf("to list all the available devices: arecord -L\n");
@@ -246,40 +239,53 @@ int main(int argn,char* argv[]){
   	if(argn>4&&argv[4]!=NULL){
   		SIZE=atoi(argv[4]);
   		if(SIZE<500){
-  			endwin();
+  			
   			printf("FT size too small!\n");
   			return 0;
   		}
   	}
         D_SAMPLE=atoi(argv[2]);
         if(D_SAMPLE<8000){
-        	endwin();
+        	
         	printf("invalid sample rate\n");
         	return 0;
         }
-  	LOWEST_F=D_SAMPLE/4000;
-  	if(D_SAMPLE>44100){
-  		fftspeed=D_SAMPLE/44100;
-  	}
   	if(argn>3&&argv[3]!=NULL){
   		DEVICE=argv[3];
   	}
   	
   }
-  curs_set(0);
+  
   snd_pcm_t *pcm_handle;
 	int channels=1;
 	
 	if ( snd_pcm_open(&pcm_handle, DEVICE,SND_PCM_STREAM_CAPTURE, 0) < 0){
-		endwin();
+		
 		printf("unable to open device \n");
 		return 0;
 	} 
-	if(snd_pcm_set_params(pcm_handle, SND_PCM_FORMAT_S16_LE,SND_PCM_ACCESS_RW_INTERLEAVED, channels, D_SAMPLE, 1, 500000)<0){
-		endwin();
-		printf("unable to set device \n");
+	if(configure_sound_card(pcm_handle,&D_SAMPLE,channels)<0){
+		
 		return 0;
 	}
+	//start ncurses here so that we can see alsa errors
+  initscr();
+  start_color();
+ 
+  int pause=0;
+  init_colorpairs();
+  nodelay(stdscr, TRUE);
+  keypad(stdscr,TRUE);
+	//Alsa might give us another sample rate
+	if(D_SAMPLE>44100){
+  		fftspeed=D_SAMPLE/44100;
+  	}
+	LOWEST_F=D_SAMPLE/4000;
+  char sdisp[100];
+  sprintf(sdisp,"sample rate: %dkhz",D_SAMPLE/1000);
+  int sslen=strlen(sdisp);//print out the sample rate at the bottom of the screen
+  noecho();
+  curs_set(0);
   init_ft(argn);
   int err;
   int count=0;
@@ -287,7 +293,9 @@ int main(int argn,char* argv[]){
   char c=-1;
   while(1){
       count++;
-     if ((err = snd_pcm_readi (pcm_handle, buffer, SIZE)) != SIZE) {
+     if ((err = snd_pcm_readi (pcm_handle, buffer, SIZE)) ==-EPIPE) {
+      endwin();
+      printf("%d\n",err);
       exit (1);
     }
     c=wgetch(stdscr);
@@ -304,6 +312,8 @@ int main(int argn,char* argv[]){
        	 printft(ppointer,psize);
       	}else{
         	printspect(ppointer,psize);
+        	mvprintw(LINES-1,COLS-sslen-1,"%s",sdisp);
+        	refresh();
       	}
       }
       count=0;
@@ -376,6 +386,8 @@ int main(int argn,char* argv[]){
        	 printft(ppointer,psize);
       	}else{
         	printspect(ppointer,psize);
+        	mvprintw(LINES-1,COLS-sslen-1,"%s",sdisp);
+        	refresh();
       	}
        c=wgetch(stdscr);
       }
