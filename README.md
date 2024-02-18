@@ -13,4 +13,7 @@ If you press any other key you will exit the program.
 ## Screenshots
 
 
-![Screenshot_2024-02-17_19-13-07](https://github.com/radiopushka/SonicSDR/assets/48099825/13b13c51-e950-483c-b3a4-34357ef87fca)
+![SDR waterfall view](https://github.com/radiopushka/SonicSDR/assets/48099825/13b13c51-e950-483c-b3a4-34357ef87fca)
+
+
+![SDR waterfall view one sine wave](https://github.com/radiopushka/SonicSDR/assets/48099825/e8c665d4-17b4-49ee-b15c-ad7f0e2d98a0)
