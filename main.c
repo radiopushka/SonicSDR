@@ -243,7 +243,7 @@ int main(int argn,char* argv[]){
   		printf("to list all the available devices: arecord -L\n");
   		return 0;
   	}
-  	if(argv[4]!=NULL){
+  	if(argn>4&&argv[4]!=NULL){
   		SIZE=atoi(argv[4]);
   		if(SIZE<500){
   			endwin();
@@ -261,7 +261,7 @@ int main(int argn,char* argv[]){
   	if(D_SAMPLE>44100){
   		fftspeed=D_SAMPLE/44100;
   	}
-  	if(argv[3]!=NULL){
+  	if(argn>3&&argv[3]!=NULL){
   		DEVICE=argv[3];
   	}
   	
