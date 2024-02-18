@@ -9,3 +9,8 @@ If you press any other key you will exit the program.
 
 ## binaries:
 [compiled on slackware x86 core](x86_64_fft_program/ftaudio)
+
+## Screenshots
+
+
+![Screenshot_2024-02-17_19-13-07](https://github.com/radiopushka/SonicSDR/assets/48099825/13b13c51-e950-483c-b3a4-34357ef87fca)
