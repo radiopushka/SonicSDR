@@ -142,7 +142,7 @@ void f16_array_to_int(char* in,int size,int* buffer,int channels){//size of buff
     nindex=i;//if we have more than one channel, we or them so that both are displayed
     for(ccount=1;ccount<channels;ccount++){
       nindex++;
-      perm=(perm+typecc[nindex])>>1;
+      perm=(perm/2+typecc[nindex]/2);
     }
     //take the average of the channels
     ccount=0;
