@@ -128,14 +128,27 @@ int find_max_freq(int size,int* buffer){
 int get_fourier_size(){
 	return gramsize;
 }
-void f16_array_to_int(char* in,int size,int* buffer){//size of buffer: size/2
+void f16_array_to_int(char* in,int size,int* buffer,int channels){//size of buffer: size/2
   int i;
   short perm;
-  int ssize=size>>1;
+  int ssize=(size>>1)*channels;
+
   short* typecc=(short*)in;
+  int ccount=0;
+  int nindex=0;
+  int f16index=0;
   for(i=0;i<ssize;i++){
     perm=typecc[i];
+    nindex=i;//if we have more than one channel, we or them so that both are displayed
+    for(ccount=1;ccount<channels;ccount++){
+      nindex++;
+      perm=(perm+typecc[nindex])>>1;
+    }
+    //take the average of the channels
+    ccount=0;
     perm=perm*attwindow[i];
-    buffer[i]=perm;
+    buffer[f16index]=perm;
+    f16index++;//convert it to mono
+    i=nindex;
   }
 }

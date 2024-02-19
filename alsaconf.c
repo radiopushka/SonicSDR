@@ -1,7 +1,7 @@
 #include <alsa/asoundlib.h>
 #include<stdio.h>
 
-int configure_sound_card(snd_pcm_t* handle,unsigned int* samplerate,int channels){
+int configure_sound_card(snd_pcm_t* handle,unsigned int* samplerate,int* channels){
   snd_pcm_hw_params_t* aparams;
   snd_pcm_hw_params_alloca(&aparams);
   if(snd_pcm_hw_params_any(handle,aparams)<0){
@@ -21,9 +21,16 @@ int configure_sound_card(snd_pcm_t* handle,unsigned int* samplerate,int channels
     return -1;
   }
   if(channels>0){
-    if(snd_pcm_hw_params_set_channels(handle,aparams,channels)<0){
-      printf("unable to set channels\n");
-      return -1;
+    if(snd_pcm_hw_params_set_channels(handle,aparams,*channels)<0){
+      int nc=1;
+      if(*channels==1){
+        nc=2;
+      }
+      *channels=nc;
+      if(snd_pcm_hw_params_set_channels(handle,aparams,nc)<0){
+       printf("unable to set channels\n");
+       return -1;
+      }
     }
   }
   if(snd_pcm_hw_params(handle,aparams)<0){

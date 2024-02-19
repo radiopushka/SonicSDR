@@ -215,6 +215,7 @@ int main(int argn,char* argv[]){
   			printf("usage, <S> for no waterfall, <U> for ultra sonic, <V> for custom followed by sample rate and optionally the device as well as FT size\n");
   			printf("to find maximum sample rate run: grep -P 'rates|bits' /proc/asound/card0/codec\\#0\n");
   			printf("to list all the available devices: arecord -L\n");
+        printf("list device sample rates: grep -P 'rates|bits' /proc/asound/card0/codec\\#0\n");
   			return 0;
   		}
   	}
@@ -264,7 +265,7 @@ int main(int argn,char* argv[]){
 		printf("unable to open device \n");
 		return 0;
 	} 
-	if(configure_sound_card(pcm_handle,&D_SAMPLE,channels)<0){
+	if(configure_sound_card(pcm_handle,&D_SAMPLE,&channels)<0){
 		
 		return 0;
 	}
@@ -301,7 +302,7 @@ int main(int argn,char* argv[]){
     c=wgetch(stdscr);
     if(count>fftspeed){
       if(pause==0){
-      	f16_array_to_int(buffer,bsize,f16convert);
+      	f16_array_to_int(buffer,bsize,f16convert,channels);
       	int psize=get_fourier_size();
       	if(psize>COLS)
       		{
@@ -393,9 +394,9 @@ int main(int argn,char* argv[]){
       }
     }
 
+  endwin();
   free_ft();
   freescrbuff();
   snd_pcm_close(pcm_handle);
-  endwin();
   return 0;
 }
