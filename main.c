@@ -226,7 +226,7 @@ int main(int argn,char* argv[]){
   if(argn>1&&argv[1][0]=='S'){
     fftspeed=FFT_SPEED_SINGLE;
   }else if(argn>1&&argv[1][0]=='U'){
-  	D_SAMPLE=176400;
+  	D_SAMPLE=96000;
   	LOWEST_F=44;
   	fftspeed=4;
   }else if(argn>1&&argv[1][0]=='V'){
@@ -278,8 +278,8 @@ int main(int argn,char* argv[]){
   nodelay(stdscr, TRUE);
   keypad(stdscr,TRUE);
 	//Alsa might give us another sample rate
-	if(D_SAMPLE>44100){
-  		fftspeed=D_SAMPLE/44100;
+	if(D_SAMPLE>24000){
+  		fftspeed=D_SAMPLE/24000;
   	}
 	LOWEST_F=D_SAMPLE/4000;
   char sdisp[100];
@@ -293,13 +293,15 @@ int main(int argn,char* argv[]){
   double* ppointer;
   char c=-1;
   while(1){
-      count++;
-     if ((err = snd_pcm_readi (pcm_handle, buffer, SIZE)) ==-EPIPE) {
+    
+     if ((err = snd_pcm_readi (pcm_handle, buffer, (SIZE>>1)/channels)) ==-EPIPE) {
       endwin();
       printf("%d\n",err);
       exit (1);
     }
     c=wgetch(stdscr);
+    if(err>0){
+      count++;
     if(count>fftspeed){
       if(pause==0){
       	f16_array_to_int(buffer,bsize,f16convert,channels);
@@ -319,6 +321,7 @@ int main(int argn,char* argv[]){
       }
       count=0;
     
+    }
     }
   if(c!=-1&&c!=-102&&c!=3&&c!=2&&c!=5&&c!=4&&c!='w'&&c!='s'&&c!=' '&&c!='0'&&c!='d'){//I just added the keys here along the way as i came up with the interface
 
