@@ -14,6 +14,8 @@ It uses a command line ncurses based GUI, some people might hate this while othe
 Press space to pause or unpause the waterfall.
 If you press any other key you will exit the program.
 
+a usefull program: https://github.com/radiopushka/Ultrasonic_Toolkit
+
 ## binaries:
 [compiled on slackware x86 core](x86_64_fft_program/ftaudio)
 
