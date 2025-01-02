@@ -2,59 +2,78 @@
 #include<stdlib.h>
 #define PI 3.141592653589793
 
-double STEP_INC=0.5;
 
-int totalsize=0;
 
-double** frequency_pre_calc_c=NULL;
-double** frequency_pre_calc_s=NULL;
+float** frequency_pre_calc_c=NULL;
+float** frequency_pre_calc_s=NULL;
+float* frequencymap=NULL;
+int loc_size=0;
+int loc_range;
+int sample_rate=48000;
 
-double calc_amplitude(int* buffer,int size,int freq){
+float calc_amplitude(float* buffer,int size,int bloc){
 	
-  if(freq>totalsize){
-  	return -1;
-  }
-  if(freq<=0){
-  	return -1;
-  }
-  register double psum1=0;
-  register double psum2=0;
-  register double precalc=(((PI*2)*freq)/(size));
+
+  if(bloc>loc_size)
+    return -1;
+
+  float psum=0;
+  float ssum=0;
   //pre calculate the sine and cosine
   int i;
-  if(frequency_pre_calc_c[freq-1]==NULL){
- 	frequency_pre_calc_c[freq-1]=malloc(sizeof(double)*size);
- 	frequency_pre_calc_s[freq-1]=malloc(sizeof(double)*size);
+  if(frequency_pre_calc_c[bloc]==NULL){
+  double precalc=(frequencymap[bloc] / sample_rate) * (2*PI);
+ 	frequency_pre_calc_c[bloc]=malloc(sizeof(float)*size);
+ 	frequency_pre_calc_s[bloc]=malloc(sizeof(float)*size);
+  double spos=0;
   	for(i=0;i<size;i++){
-  		frequency_pre_calc_c[freq-1][i]=cos(precalc*i);
-  		frequency_pre_calc_s[freq-1][i]=sin(precalc*i);
-  	}
+  		frequency_pre_calc_c[bloc][i]=cos(spos);
+  		frequency_pre_calc_s[bloc][i]=sin(spos);
+      spos=spos+precalc;
+      if(spos >= 2*PI){
+        spos = spos - (2*PI);
+  	  }
+    }
   }
   //now use the calculated values
-  for(i=0;i<size;i++){
+  float* carray=frequency_pre_calc_c[bloc];
+  float* sarray=frequency_pre_calc_s[bloc];
+
+  psum=(*carray)*(*buffer);
+  ssum=(*sarray)*(*buffer);
+  carray++;
+  sarray++;
+  float* buffer_start=buffer+1;
+  float* buffer_end=buffer+size;
+
+  for(buffer=buffer_start;buffer<buffer_end;buffer++){
     
     
     
-    psum1=psum1+frequency_pre_calc_c[freq-1][i]*buffer[i];
-    psum2=psum2+frequency_pre_calc_s[freq-1][i]*buffer[i];
+    psum=(psum+(*carray)*(*buffer));
+    ssum=(ssum+(*sarray)*(*buffer));
+    carray++;
+    sarray++;
     
   }
-  return (sqrt(psum1*psum1+psum2*psum2))/(size);
+  return sqrt(psum*psum+ssum*ssum)/size;
 }
-double* darray=NULL;
-double* attwindow=NULL;
+
+//calculation parameters
+float* darray=NULL;
 int gramsize=0;
-int* frequencymap=NULL;
+int step=0;
+int f_range=0;
+int global_buffer_size;
+//
 void free_fourier_transform(){
 	free(darray);
 	darray=NULL;
-	free(attwindow);
-	attwindow=NULL;
   free(frequencymap);
   frequencymap=NULL;
   if(frequency_pre_calc_c!=NULL){
   int i;
-  for(i=0;i<totalsize;i++){
+  for(i=0;i<loc_range;i++){
   	free(frequency_pre_calc_c[i]);
   	free(frequency_pre_calc_s[i]);
   }
@@ -64,91 +83,76 @@ void free_fourier_transform(){
   	frequency_pre_calc_s=NULL;
   	
   }
-  totalsize=0;
 }
-void init_fourier_transform(int size,double depth){//this size is f16 char divided by 2
-	 gramsize=0;
+void init_fourier_transform(int size,int start,int stop,int width,int rate){//this size is f16 char divided by 2
+   sample_rate=rate;
+	 gramsize=width;
+   global_buffer_size=size;
 	 int i;
 	 free_fourier_transform();
-	 totalsize=size;
-	 STEP_INC=depth;
-	 
-	 double step=1;
-	 for(i=0;i<(size>>1);i=i+step){
- 	   step=step+STEP_INC;
- 	   gramsize++;
- 	 }
- 	 frequency_pre_calc_c=malloc(sizeof(double*)*size);
- 	 frequency_pre_calc_s=malloc(sizeof(double*)*size);
- 	 for(i=0;i<size;i++){
+
+    f_range=stop-start;
+
+    step=f_range/width; 
+   int array_tracker=0;
+    for(i=start;i<stop;i=i+step){
+      array_tracker++;
+    }
+    loc_size=array_tracker;
+    loc_range=array_tracker+1;
+
+	 frequency_pre_calc_c=malloc(sizeof(float*)*(loc_range));
+ 	 frequency_pre_calc_s=malloc(sizeof(float*)*(loc_range));
+ 	 for(i=0;i<loc_range;i++){
  	 	frequency_pre_calc_c[i]=NULL;
  	 	frequency_pre_calc_s[i]=NULL;
  	 }
-    frequencymap=malloc(sizeof(int)*(gramsize+1));
- 	  darray=malloc(sizeof(double)*(gramsize));
- 	  attwindow=malloc(sizeof(double)*(size));
- 	  double stepc=(PI)/(size-1);
- 	  double pos=0;
- 	  for(i=0;i<size;i++){
- 	  	attwindow[i]=cos(pos);
- 	  	pos=pos+stepc;
- 	  }
+    frequencymap=malloc(sizeof(float)*(loc_range));
+    
+    array_tracker=0;
+    for(i=start;i<stop;i=i+step){
+      frequencymap[array_tracker]=i;
+      array_tracker++;
+    }
+ 	  darray=malloc(sizeof(float)*(loc_range));
 }
 int get_freq_at_index(int i){
   return frequencymap[i];
 }
-double* produce_period_gram(int* buffer, int size,int start,int stop){//this size is f16 char divided by 2
-  int i;
-  double step=1;
-  int array_step=0; 
-  for(i=start;i<((size>>1)-stop);i=i+step){
-    step=step+STEP_INC;
-    darray[array_step]=calc_amplitude(buffer,size,i);
-    frequencymap[array_step]=i;
-    array_step++;
-    frequencymap[array_step]=-1;
+float* produce_period_gram(float* buffer){//this size is f16 char divided by 2
+
+  for(int i=0;i<loc_size;i++){
+    darray[i]=calc_amplitude(buffer,global_buffer_size,i);
   }
   return darray;
 
 }
-int find_max_freq(int size,int* buffer){
-	int i;
-	double maxf=0;
-	double f;
-	int thef=0;
-	for(i=0;i<(size>>1);i=i+1){
-    		f=calc_amplitude(buffer,size,i);
- 	 	if(f>maxf){
- 	 		maxf=f;
- 	 		thef=i;
- 	 	}
- 	 }
- 	 return thef;
+int find_max_freq(int size,float* buffer){
+ 	 return 0;
 }
 int get_fourier_size(){
-	return gramsize;
+	return loc_size;
 }
-void f16_array_to_int(char* in,int size,int* buffer,int channels){//size of buffer: size/2
-  int i;
-  short perm;
-  int ssize=(size>>1)*channels;
+void f16_array_to_f(short* in,int size,float* buffer,int channels){//size of buffer: size/2
+  
 
-  short* typecc=(short*)in;
-  int ccount=0;
-  int nindex=0;
-  int f16index=0;
-  for(i=0;i<ssize;i++){
-    perm=typecc[i];
-    nindex=i;//if we have more than one channel, we or them so that both are displayed
-    for(ccount=1;ccount<channels;ccount++){
-      nindex++;
-      perm=(perm/2+typecc[nindex]/2);
+  short* end=in+size*channels;
+  
+  int c=1;
+  float avg=0;
+
+  for(short* start=in;start<end;start++){
+    
+
+    if(c>=channels){
+      *buffer=(avg+*start)/channels;
+      buffer++;
+      c=1;
+      avg=0;
+    }else{
+      avg=(avg+*start);
+      c++;
     }
-    //take the average of the channels
-    ccount=0;
-    perm=perm*attwindow[i];
-    buffer[f16index]=perm;
-    f16index++;//convert it to mono
-    i=nindex;
+    
   }
 }
