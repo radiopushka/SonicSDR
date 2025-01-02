@@ -8,13 +8,12 @@ char* special_chars="  ``..--''::__,,^^==;;>><<++!!rrcc**//zz??ssLLTTvv))JJ77((|
 
 int* color_array=NULL;
 
-int maxval=0;
+
 int maxindex=0;
 
 int is_colored=1;
 
 void free_colors(){
-  printf("%d\n",maxval);
   free(color_array);
   color_array=NULL;
 }
@@ -80,9 +79,7 @@ int get_color(int index){
   if(index>=maxindex){
     index=maxindex-1;
   }
-  if(index>maxval){
-    maxval=index;
-  }
+ 
   return color_array[index];
 }
 
