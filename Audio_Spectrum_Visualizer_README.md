@@ -1,5 +1,5 @@
 
-# Audio Spectrum Visualizer
+# Sonic SDR
 
 A real-time audio spectrum visualizer using ALSA and ncurses, designed to process audio input and display its frequency spectrum as a waterfall plot.
 
