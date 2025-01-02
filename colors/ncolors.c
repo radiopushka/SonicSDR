@@ -21,20 +21,14 @@ void init_color_array(int size){
   maxindex=size;
   for(int i =0;i<size;i++){
     int value=array_count;
-    int third=1000/3;
 
     //the default color
     if(i==7)
       shift=1;
 
-    if(value<third){
-      init_color(i+shift,value,value,value);
-    }else if(value<third*2){
-      init_color(i+shift,value,value,value);
-    }else{
-      init_color(i+shift,value,value,value);
 
-    }
+    init_color(i+shift,value,value,value);
+
     init_pair(i+shift,i+shift,i+shift);
     array_count=array_count+step;
     *color_array_cp=' '|COLOR_PAIR(i+shift);

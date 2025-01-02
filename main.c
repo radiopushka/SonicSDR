@@ -5,7 +5,6 @@
 #include "colors/ncolors.h"
 #include <math.h>
 #include <locale.h>
-#include "cursescolors.c"
 #include "alsaconf.c"
 
 int SIZE=4000;
@@ -57,7 +56,7 @@ void printspect(float* trans,int size){
     ppsize=size;
     for(i=0;i<bbsize;i++){
       screenbuff[i]=malloc(sizeof(chtype)*(size+1));
-      for(i2=0;i2<size;i2++){
+      for(i2=0;i2<size+1;i2++){
         screenbuff[i][i2]=' ';
       }
     }
@@ -66,7 +65,7 @@ void printspect(float* trans,int size){
     chtype** nscrn=malloc(sizeof(chtype*)*(nsize+1));
     for(i=0;i<nsize;i++){
       nscrn[i]=malloc(sizeof(chtype)*(size+1));
-      for(i2=0;i2<size;i2++){
+      for(i2=0;i2<size+1;i2++){
         if(i2<ppsize&&i<bbsize){
           nscrn[i][i2]=screenbuff[i][i2];
         }else{
@@ -80,16 +79,18 @@ void printspect(float* trans,int size){
     bbsize=nsize;
   }
   clear();
+  size_t cpsize=size*sizeof(chtype);
   for(i=bbsize-1;i>0;i--){
-    for(i2=0;i2<size;i2++){
-      screenbuff[i][i2]=screenbuff[i-1][i2];
+    memcpy(screenbuff[i],screenbuff[i-1],cpsize);
+    for(i2=0;i2<size+1;i2++){
       	
-        mvwaddch(stdscr,i,i2,screenbuff[i][i2]);
+      mvwaddch(stdscr,i,i2,screenbuff[i][i2]);
     }
   }
   for(i=0;i<size;i++){
     screenbuff[0][i]=getfromdecimal(trans[i]);
   }
+  screenbuff[0][i]=0;
   mvprintw(LINES-1,0,"gain: %d *=%dHz",(int)amp,get_freq_at_index(mouse_pointer));
   mvprintw(0,0,"%dHz",get_freq_at_index(0));
   mvprintw(0,COLS-8,"%dHz",get_freq_at_index(get_fourier_size()-1));
@@ -177,7 +178,8 @@ int main(int argn,char* argv[]){
   initscr();
   start_color();
 
-  init_color_array(200);
+  //254
+  init_color_array(254);
  
   int pause=0;
   //init_colorpairs();
@@ -194,6 +196,8 @@ int main(int argn,char* argv[]){
   float* ppointer;
   char c=-1;
 
+  //pause and start
+  int fptog=0;
 
   while(c!='q'){
     
@@ -209,7 +213,7 @@ int main(int argn,char* argv[]){
       exit (1);
     }
     c=wgetch(stdscr);
-    if(pause > SKIP){
+    if(pause > SKIP && fptog == 0){
         f16_array_to_f(buffer,bsize,f16convert,channels);
         ppointer=produce_period_gram(f16convert);
 
@@ -219,7 +223,6 @@ int main(int argn,char* argv[]){
         pause=0;
     }
     mvprintw(0,mouse_pointer,"*");
-    refresh();
     pause++;
     if(prev_cols!=COLS){
      mouse_pointer=0;
@@ -290,6 +293,10 @@ int main(int argn,char* argv[]){
           mvprintw(LINES/2+4,COLS/2,"q - quit");
           break;
 
+        case ' ':
+          fptog=~fptog;
+          break;
+
           
           
 
@@ -303,6 +310,7 @@ int main(int argn,char* argv[]){
       mvprintw(0,mouse_pointer,"*");
       refresh();
     }
+    refresh();
 
 
   }

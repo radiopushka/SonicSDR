@@ -1,2 +1,6 @@
+CC=gcc
+CFLAGS=
+LIBS=-ltinfo -lasound -lm -lncurses
+
 all:
-	cc main.c colors/ncolors.c fourier.c -Wall -lm -lasound -lncurses -ltinfo -lpthread -fno-math-errno -O2 -march=native -g -o ftaudio
+	$(CC) $(CFLAGS) main.c colors/ncolors.c fourier.c -Wall $(LIBS) -fno-math-errno -O2 -march=native -g -o ftaudio
