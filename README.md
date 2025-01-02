@@ -1,5 +1,5 @@
 # Sonic SDR
-##Software Define "radio", produces a visual waterfall model of interfaces
+## Software Defined "radio", produces a visual waterfall model of ALSA interfaces
 You can use it to for example detect certain frequnecies in audio. If you have a sound card(or a device recognized by Alsa) that is able to sample at higher frequencies, you can use it for various other purposes. typically, your sound card samples at 48000 khz, divide that by two to get the maximum frequency possible.
 more information if you call ./ftaudio
 there will be a print once you exit
