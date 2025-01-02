@@ -47,7 +47,7 @@ Run the program with the following syntax:
 ./ftaudio <alsa_device> <sample_rate> <buffer_size> <skip_buffer>
 ```
 
-### Arguments
+### Arguments (optional)
 
 - `<alsa_device>`: ALSA audio device (default: `"default"`).
 - `<sample_rate>`: Audio sample rate in Hz (default: `48000`).
