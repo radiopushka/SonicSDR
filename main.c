@@ -14,6 +14,8 @@ int LOWEST_F=11;
 int FFT_SPEED_SPEC=0;
 #define FFT_SPEED_SINGLE 0 
 
+WINDOW* stdw;//ncurses window
+
 char* DEVICE="default";
 
 //interface stuff
@@ -28,11 +30,11 @@ double amp=30.0;
 
 pthread_mutex_t syncm;
 
-chtype getfromdecimal(float ftout){
+int getfromdecimal(float ftout){
   int normalization=ftout*amp;
   return get_color(normalization);
  }
-chtype** screenbuff=NULL;
+int** screenbuff=NULL;
 int bbsize=0;
 void freescrbuff(){
   if(screenbuff==NULL){
@@ -52,20 +54,20 @@ void printspect(float* trans,int size){
   int nsize;
   if(screenbuff==NULL){
     bbsize=LINES;
-    screenbuff=malloc(sizeof(chtype*)*(bbsize+1));
+    screenbuff=malloc(sizeof(int*)*(bbsize+1));
     ppsize=size;
     for(i=0;i<bbsize;i++){
-      screenbuff[i]=malloc(sizeof(chtype)*(size+1));
+      screenbuff[i]=malloc(sizeof(int)*(size+1));
       for(i2=0;i2<size+1;i2++){
         screenbuff[i][i2]=' ';
       }
     }
   }else if(ppsize!=size){
     nsize=LINES;
-    chtype** nscrn=malloc(sizeof(chtype*)*(nsize+1));
+    int** nscrn=malloc(sizeof(int*)*(nsize+1));
     for(i=0;i<nsize;i++){
-      nscrn[i]=malloc(sizeof(chtype)*(size+1));
-      for(i2=0;i2<size+1;i2++){
+      nscrn[i]=malloc(sizeof(int)*(size+1));
+      for(i2=0;i2<size;i2++){
         if(i2<ppsize&&i<bbsize){
           nscrn[i][i2]=screenbuff[i][i2];
         }else{
@@ -79,13 +81,14 @@ void printspect(float* trans,int size){
     bbsize=nsize;
   }
   clear();
-  size_t cpsize=size*sizeof(chtype);
+  size_t cpsize=size*sizeof(int);
   for(i=bbsize-1;i>0;i--){
     memcpy(screenbuff[i],screenbuff[i-1],cpsize);
-    for(i2=0;i2<size+1;i2++){
+      for(i2=0;i2<size;i2++){
       	
-      mvwaddch(stdscr,i,i2,screenbuff[i][i2]);
-    }
+        mvwaddch(stdw,i,i2,screenbuff[i][i2]);
+      }
+
   }
   for(i=0;i<size;i++){
     screenbuff[0][i]=getfromdecimal(trans[i]);
@@ -175,7 +178,7 @@ int main(int argn,char* argv[]){
   stop_freq=D_SAMPLE/2;
 
 	//start ncurses here so that we can see alsa errors
-  initscr();
+  stdw=initscr();
   start_color();
 
   //254
@@ -183,8 +186,8 @@ int main(int argn,char* argv[]){
  
   int pause=0;
   //init_colorpairs();
-  nodelay(stdscr, TRUE);
-  keypad(stdscr,TRUE);
+  nodelay(stdw, TRUE);
+  keypad(stdw,TRUE);
 	//Alsa might give us another sample rate
   char sdisp[100];
   sprintf(sdisp,"sample rate: %dkhz",D_SAMPLE/1000);
@@ -212,7 +215,7 @@ int main(int argn,char* argv[]){
       printf("%d\n",err);
       exit (1);
     }
-    c=wgetch(stdscr);
+    c=wgetch(stdw);
     if(pause > SKIP && fptog == 0){
         f16_array_to_f(buffer,bsize,f16convert,channels);
         ppointer=produce_period_gram(f16convert);
@@ -234,7 +237,7 @@ int main(int argn,char* argv[]){
      reset_ft();
      prev_cols=COLS;
     }
-    while(c!=-1){
+    while(c!=-1 && c!=255){
       mvprintw(LINES/2,COLS/2,"%d",c);
       switch(c){
         case 3:
@@ -303,7 +306,7 @@ int main(int argn,char* argv[]){
           
       }
       if(c!='q')
-        c=wgetch(stdscr);
+        c=wgetch(stdw);
       else 
         break;
 

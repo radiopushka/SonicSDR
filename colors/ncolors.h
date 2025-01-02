@@ -4,7 +4,8 @@
 #include <ncurses.h>
 
 void init_color_array(int size);
-chtype get_color(int index);
+int get_color(int index);
 void free_colors();
+int get_colored();
 
 #endif // !NCOLORS
