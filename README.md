@@ -75,6 +75,8 @@ Run the program with the following syntax:
 
 ## Screenshots
 
+![image on sdr](https://github.com/radiopushka/SonicSDR/blob/main/Screenshots/2025-01-02_17-18.png)
+
 ![image on sdr](https://github.com/radiopushka/SonicSDR/blob/main/Screenshots/2025-01-01_23-01.png)
 
 ![digital ultrasonic signal](https://github.com/radiopushka/SonicSDR/blob/main/Screenshots/2025-01-01_23-07.png)
