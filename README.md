@@ -15,13 +15,7 @@ A real-time audio spectrum visualizer using ALSA and ncurses, designed to proces
 ## Prerequisites
 
 - **ALSA**: Ensure ALSA is installed on your system.
-- **ncurses**: The application uses `ncurses` for terminal-based UI.
-
-To install the dependencies on a Debian-based system:
-
-```bash
-sudo apt-get install libasound2-dev libncurses5-dev
-```
+- Ensure your terminal supports RGB colors
 
 ## Building the Project
 
