@@ -2,10 +2,13 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<alsa/asoundlib.h>
-#include "colors/ncolors.h"
+#include "colors/colors.h"
 #include <math.h>
 #include <locale.h>
 #include "alsaconf.c"
+#include "curses/curses.c"
+#include "KEYS.h"
+#include <sys/ioctl.h>
 
 int SIZE=4000;
 int SKIP=0;
@@ -14,27 +17,39 @@ int LOWEST_F=11;
 int FFT_SPEED_SPEC=0;
 #define FFT_SPEED_SINGLE 0 
 
-WINDOW* stdw;//ncurses window
+int LINES=50;
+int COLS=100;
+
 
 char* DEVICE="default";
 
 //interface stuff
-  int mouse_pointer=0;
+  int mouse_pointer=1;
   int start_freq=0;
   int stop_freq=0;
 
 //chtype printout[]={' '|COLOR_PAIR((1<<7)|(7&0)<<4|(7&0)),' '|COLOR_PAIR((1<<7)|(7&1)<<4|(7&0)),' '|COLOR_PAIR((1<<7)|(7&3)<<4|(7&0)),' '|COLOR_PAIR((1<<7)|(7&2)<<4|(7&0)),' '|COLOR_PAIR((1<<7)|(7&6)<<4|(7&0)),' '|COLOR_PAIR((1<<7)|(7&4)<<4|(7&0)),' '|COLOR_PAIR((1<<7)|(7&5)<<4|(7&0))};
 
 int print_offset=0;
-double amp=30.0;
+double amp=100.0;
 
 pthread_mutex_t syncm;
 
-int getfromdecimal(float ftout){
+
+  struct winsize w;
+
+void update_term_size(){
+  ioctl(0, TIOCGWINSZ, &w);
+  LINES=w.ws_row;
+  COLS=w.ws_col;
+}
+
+
+char* getfromdecimal(float ftout){
   int normalization=ftout*amp;
-  return get_color(normalization);
+  return get_colored_string(normalization);
  }
-int** screenbuff=NULL;
+char*** screenbuff=NULL;
 int bbsize=0;
 void freescrbuff(){
   if(screenbuff==NULL){
@@ -49,29 +64,29 @@ void freescrbuff(){
 }
 int ppsize=0;
 void printspect(float* trans,int size){
-  int i;
-  int i2;
+  int i=0;
+  int i2=0;
   int nsize;
   if(screenbuff==NULL){
-    bbsize=LINES;
-    screenbuff=malloc(sizeof(int*)*(bbsize+1));
+    bbsize=LINES-2;
+    screenbuff=malloc(sizeof(char*)*(bbsize+1));
     ppsize=size;
     for(i=0;i<bbsize;i++){
-      screenbuff[i]=malloc(sizeof(int)*(size+1));
+      screenbuff[i]=malloc(sizeof(char*)*(size+1));
       for(i2=0;i2<size+1;i2++){
-        screenbuff[i][i2]=' ';
+        screenbuff[i][i2]=get_reset_string();
       }
     }
   }else if(ppsize!=size){
-    nsize=LINES;
-    int** nscrn=malloc(sizeof(int*)*(nsize+1));
+    nsize=LINES-2;
+    char*** nscrn=malloc(sizeof(char*)*(nsize+1));
     for(i=0;i<nsize;i++){
-      nscrn[i]=malloc(sizeof(int)*(size+1));
+      nscrn[i]=malloc(sizeof(char*)*(size+1));
       for(i2=0;i2<size;i2++){
         if(i2<ppsize&&i<bbsize){
           nscrn[i][i2]=screenbuff[i][i2];
         }else{
-          nscrn[i][i2]=' ';
+          nscrn[i][i2]=get_reset_string();
         }
       }
     }
@@ -81,22 +96,30 @@ void printspect(float* trans,int size){
     bbsize=nsize;
   }
   clear();
-  size_t cpsize=size*sizeof(int);
+  size_t cpsize=size*sizeof(char*);
   for(i=bbsize-1;i>0;i--){
     memcpy(screenbuff[i],screenbuff[i-1],cpsize);
+      mvmove(i+1,0);
       for(i2=0;i2<size;i2++){
-      	
-        mvwaddch(stdw,i,i2,screenbuff[i][i2]);
+      	if(i2>COLS-2)
+          break;
+        fputs(screenbuff[i][i2],stdout);
       }
 
   }
+
+  printf(get_reset_string(),stdout);
+
   for(i=0;i<size;i++){
     screenbuff[0][i]=getfromdecimal(trans[i]);
   }
   screenbuff[0][i]=0;
-  mvprintw(LINES-1,0,"gain: %d *=%dHz",(int)amp,get_freq_at_index(mouse_pointer));
-  mvprintw(0,0,"%dHz",get_freq_at_index(0));
-  mvprintw(0,COLS-8,"%dHz",get_freq_at_index(get_fourier_size()-1));
+  mvmove(LINES-1,0);
+  printf("gain: %d *=%dHz",(int)amp,get_freq_at_index(mouse_pointer-1));
+  mvmove(0,0);
+  printf("%dHz",get_freq_at_index(0));
+  mvmove(0,COLS-8);
+  printf("%dHz",get_freq_at_index(get_fourier_size()-1));
 
 }
 
@@ -121,6 +144,7 @@ void init_ft(int argn){
   buffer=malloc(sizeof(short)*bsize*channels);
 }
 void reset_ft(){
+  update_term_size();
   free_fourier_transform();
   init_fourier_transform(bsize,start_freq,stop_freq,COLS-4,D_SAMPLE); 
 
@@ -168,32 +192,28 @@ int main(int argn,char* argv[]){
 
 		return 0;
 	}
-  printf("alsa sample rate: %d\n",D_SAMPLE);
-  printf("%s <alsa device> <sample rate> <recv buffer size> <skip buffer>\n",argv[0]);
-  printf("defaults:\n");
-  printf("%s default 48000 4000 0\n",argv[0]);
-
+ 
   bsize=SIZE;
   start_freq=D_SAMPLE/bsize;
   stop_freq=D_SAMPLE/2;
 
-	//start ncurses here so that we can see alsa errors
-  stdw=initscr();
-  start_color();
 
+  setup_terminal();
+  update_term_size();
   //254
-  init_color_array(254);
+  init_colors(1275);
  
   int pause=0;
   //init_colorpairs();
-  nodelay(stdw, TRUE);
-  keypad(stdw,TRUE);
+  //nodelay(stdw, TRUE);
+  //keypad(stdw,TRUE);
 	//Alsa might give us another sample rate
   char sdisp[100];
   sprintf(sdisp,"sample rate: %dkhz",D_SAMPLE/1000);
   int sslen=strlen(sdisp);//print out the sample rate at the bottom of the screen
-  noecho();
-  curs_set(0);
+  //noecho();
+  //curs_set(0);
+  mvmove(0,0);
   init_ft(argn);
   int err;
   float* ppointer;
@@ -205,30 +225,34 @@ int main(int argn,char* argv[]){
   while(c!='q'){
     
      if ((err = snd_pcm_readi (pcm_handle, buffer, bsize)) ==-EPIPE) {
-      endwin();
       free_ft();
       freescrbuff();
       snd_pcm_close(pcm_handle);
       snd_config_update_free_global();
-      free_colors();
+      free_color_info();
 
       printf("%d\n",err);
       exit (1);
     }
-    c=wgetch(stdw);
+    c=wgetch();
     if(pause > SKIP && fptog == 0){
         f16_array_to_f(buffer,bsize,f16convert,channels);
         ppointer=produce_period_gram(f16convert);
 
       	int psize=get_fourier_size();
         printspect(ppointer,psize);
-        mvprintw(LINES-1,COLS-sslen-1,"%s",sdisp);
+        mvmove(LINES-1,COLS-sslen-1);
+        printf("%s",sdisp);
         pause=0;
     }
-    mvprintw(0,mouse_pointer,"*");
+    mvprint(0,mouse_pointer,"*");
+    mvmove(0,mouse_pointer);
     pause++;
+
+    update_term_size();
+
     if(prev_cols!=COLS){
-     mouse_pointer=0;
+     mouse_pointer=1;
       if(stop_freq-start_freq < COLS){
             start_freq=D_SAMPLE/bsize;
             stop_freq=D_SAMPLE/2;
@@ -238,62 +262,72 @@ int main(int argn,char* argv[]){
      prev_cols=COLS;
     }
     while(c!=-1 && c!=255){
-      mvprintw(LINES/2,COLS/2,"%d",c);
+
+      mvmove(LINES/2,COLS/2);
+      printf("%d",c);
       switch(c){
-        case 3:
+        case ARROW_UP:
           if(amp<1000)
             amp++;
-          mvprintw(LINES/2,COLS/2,"gain: %d",(int)amp);
+
+          mvmove(LINES/2,COLS/2);
+          printf("gain: %d",(int)amp);
           break;
 
-        case 2:
+        case ARROW_DOWN:
           if(amp > 0)
             amp--;
-          mvprintw(LINES/2,COLS/2,"gain: %d",(int)amp);
+
+          mvmove(LINES/2,COLS/2);
+          printf("gain: %d",(int)amp);
           break;
 
-        case 5:
+        case ARROW_RIGHT:
           if(mouse_pointer<COLS-4)
-          mouse_pointer++;
-          mvprintw(LINES/2,COLS/2,"pointer: %dHz",get_freq_at_index(mouse_pointer));
+            mouse_pointer++;
+
+          mvmove(LINES/2,COLS/2);
+          printf("pointer: %dHz",get_freq_at_index(mouse_pointer-1));
           break;
-        case 4:
-          if(mouse_pointer>0)
-          mouse_pointer--;
-          mvprintw(LINES/2,COLS/2,"pointer: %dHz",get_freq_at_index(mouse_pointer));
+        case ARROW_LEFT:
+          if(mouse_pointer>1)
+            mouse_pointer--;
+
+          mvmove(LINES/2,COLS/2);
+          printf("pointer: %dHz",get_freq_at_index(mouse_pointer-1));
           break;
-        case '\n':
-          stop_freq=get_freq_at_index(mouse_pointer);
+        case ENTER:
+          stop_freq=get_freq_at_index(mouse_pointer-1);
           if(stop_freq-start_freq < COLS){
             stop_freq=start_freq+COLS;
           }
-          mouse_pointer=0;
+          mouse_pointer=1;
           reset_ft();
           break;
-        case 9:
-          start_freq=get_freq_at_index(mouse_pointer);
+        case TAB:
+          start_freq=get_freq_at_index(mouse_pointer-1);
           if(stop_freq-start_freq < COLS){
             start_freq=stop_freq-COLS;
           }
 
-          mouse_pointer=0;
+          mouse_pointer=1;
           reset_ft();
           break;
         case 'r':
-          mouse_pointer=0;
+          mouse_pointer=1;
           start_freq=D_SAMPLE/bsize;
           stop_freq=D_SAMPLE/2;
           reset_ft();
           break;
         case 'h':
-          mvprintw(LINES/2-3,COLS/2,"arrow up - increase gain");
-          mvprintw(LINES/2-2,COLS/2,"arrow down - decrease gain");
-          mvprintw(LINES/2-1,COLS/2,"arrow right - move frequency cursor right");
-          mvprintw(LINES/2,COLS/2,"arrow left - move frequency cursor left");
-          mvprintw(LINES/2+1,COLS/2,"enter - set the waterfall's max frequency");
-          mvprintw(LINES/2+2,COLS/2,"tab - set the waterfall's min frequency");
-          mvprintw(LINES/2+3,COLS/2,"r - reset the waterfall");
-          mvprintw(LINES/2+4,COLS/2,"q - quit");
+          mvprint(LINES/2-3,COLS/2,"arrow up - increase gain");
+          mvprint(LINES/2-2,COLS/2,"arrow down - decrease gain");
+          mvprint(LINES/2-1,COLS/2,"arrow right - move frequency cursor right");
+          mvprint(LINES/2,COLS/2,"arrow left - move frequency cursor left");
+          mvprint(LINES/2+1,COLS/2,"enter - set the waterfall's max frequency");
+          mvprint(LINES/2+2,COLS/2,"tab - set the waterfall's min frequency");
+          mvprint(LINES/2+3,COLS/2,"r - reset the waterfall");
+          mvprint(LINES/2+4,COLS/2,"q - quit");
           break;
 
         case ' ':
@@ -306,11 +340,12 @@ int main(int argn,char* argv[]){
           
       }
       if(c!='q')
-        c=wgetch(stdw);
+        c=wgetch();
       else 
         break;
 
-      mvprintw(0,mouse_pointer,"*");
+      mvprint(0,mouse_pointer,"*");
+      mvmove(0,mouse_pointer);
       refresh();
     }
     refresh();
@@ -318,11 +353,24 @@ int main(int argn,char* argv[]){
 
   }
 
-  endwin();
   free_ft();
   freescrbuff();
   snd_pcm_close(pcm_handle);
   snd_config_update_free_global();
-  free_colors();
+  printf("%s\n",get_reset_string());
+  mvmove(0,0);
+  clear();
+  free_color_info();
+  
+  mvmove(1,0);
+  printf("alsa sample rate: %d\n",D_SAMPLE);
+  mvmove(2,0);
+  printf("%s <alsa device> <sample rate> <recv buffer size> <skip buffer>\n",argv[0]);
+  mvmove(3,0);
+  printf("defaults:\n");
+  mvmove(4,0);
+  printf("%s default 48000 4000 0\n",argv[0]);
+  mvmove(5,0);
+
   return 0;
 }
