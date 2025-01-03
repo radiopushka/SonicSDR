@@ -18,6 +18,14 @@ void setup_terminal(){
    set_conio_terminal_mode();
 }
 
+void nocurs(){
+  printf("\e[?25l");
+}
+void curs(){
+  printf("\e[?25h");
+}
+
+
 int wgetch()
 {
   if(!kbhit())

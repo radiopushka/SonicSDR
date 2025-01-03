@@ -17,7 +17,7 @@ int LOWEST_F=11;
 int FFT_SPEED_SPEC=0;
 #define FFT_SPEED_SINGLE 0 
 
-int LINES=50;
+int LINES=30;
 int COLS=100;
 
 
@@ -42,6 +42,12 @@ void update_term_size(){
   ioctl(0, TIOCGWINSZ, &w);
   LINES=w.ws_row;
   COLS=w.ws_col;
+  if(LINES<1){
+    LINES=30;
+  }
+  if(COLS<1){
+    COLS=100;
+  }
 }
 
 
@@ -94,8 +100,8 @@ void printspect(float* trans,int size){
     screenbuff=nscrn;
     ppsize=size;
     bbsize=nsize;
+    clear();
   }
-  clear();
   size_t cpsize=size*sizeof(char*);
   for(i=bbsize-1;i>0;i--){
     memcpy(screenbuff[i],screenbuff[i-1],cpsize);
@@ -115,7 +121,7 @@ void printspect(float* trans,int size){
   }
   screenbuff[0][i]=0;
   mvmove(LINES-1,0);
-  printf("gain: %d *=%dHz",(int)amp,get_freq_at_index(mouse_pointer-1));
+  printf("gain: %d *=%dHz  ",(int)amp,get_freq_at_index(mouse_pointer-1));
   mvmove(0,0);
   printf("%dHz",get_freq_at_index(0));
   mvmove(0,COLS-8);
@@ -142,11 +148,13 @@ void init_ft(int argn){
 
   f16convert=malloc(sizeof(float)*bsize);
   buffer=malloc(sizeof(short)*bsize*channels);
+  clear();
 }
 void reset_ft(){
   update_term_size();
   free_fourier_transform();
   init_fourier_transform(bsize,start_freq,stop_freq,COLS-4,D_SAMPLE); 
+  clear();
 
 }
 int new_data=0;
@@ -200,6 +208,7 @@ int main(int argn,char* argv[]){
 
   setup_terminal();
   update_term_size();
+
   //254
   init_colors(1275);
  
@@ -213,6 +222,7 @@ int main(int argn,char* argv[]){
   int sslen=strlen(sdisp);//print out the sample rate at the bottom of the screen
   //noecho();
   //curs_set(0);
+  nocurs();
   mvmove(0,0);
   init_ft(argn);
   int err;
@@ -234,6 +244,7 @@ int main(int argn,char* argv[]){
       printf("%d\n",err);
       exit (1);
     }
+    nocurs();
     c=wgetch();
     if(pause > SKIP && fptog == 0){
         f16_array_to_f(buffer,bsize,f16convert,channels);
@@ -245,7 +256,12 @@ int main(int argn,char* argv[]){
         printf("%s",sdisp);
         pause=0;
     }
-    mvprint(0,mouse_pointer,"*");
+
+    if(mouse_pointer-1==0)
+      mvprint(0,mouse_pointer-1,"* ");
+    else
+      mvprint(0,mouse_pointer-1," * ");
+
     mvmove(0,mouse_pointer);
     pause++;
 
@@ -344,7 +360,11 @@ int main(int argn,char* argv[]){
       else 
         break;
 
-      mvprint(0,mouse_pointer,"*");
+      if(mouse_pointer-1==0)
+        mvprint(0,mouse_pointer-1,"* ");
+      else
+        mvprint(0,mouse_pointer-1," * ");
+
       mvmove(0,mouse_pointer);
       refresh();
     }
@@ -355,6 +375,7 @@ int main(int argn,char* argv[]){
 
   free_ft();
   freescrbuff();
+  curs();
   snd_pcm_close(pcm_handle);
   snd_config_update_free_global();
   printf("%s\n",get_reset_string());
