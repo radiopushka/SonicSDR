@@ -4,13 +4,15 @@
 
 int main(){
 
-  init_colors(1275);
+  init_colors(1530);
 
-  for(int i=0;i<1275;i++){
+  for(int i=0;i<1530;i++){
     fputs(get_colored_string(i),stdout);
+    printf("%d",i);
   }
-  fputs(get_reset_string(),stdout);
-  printf("\n");
+  printf("%s       \n",get_reset_string());
+
+  
   free_color_info();
   return 0;
 }

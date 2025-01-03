@@ -53,13 +53,16 @@ void get_RGB(struct RGB* rgb_st,int hue_value){
     *B=0;
     return;
   }
-  if(hue_value>1275){
+  if(hue_value<=1530){
     *R=255;
-    *G=0;
-    *B=0;
-
+    *G=hue_value-1275;
+    *B=hue_value-1275;
+     return;
   }
 
+  *R=255;
+  *G=255;
+  *B=255;
 
 }
 
@@ -87,14 +90,14 @@ int color_array_size=0;
 char* end_string=NULL;
 
 void init_colors(int size){
-  if(size>1275){
-    size=1275;
+  if(size>1530){
+    size=1530;
   }
   color_array_size=size;
   color_array=malloc(sizeof(char*)*size);
 
 
-  int interval=1275/size;
+  int interval=1530/size;
   int color_index=0;
   for(int i=0;i<size;i++){
     struct RGB* rgb_val=malloc(sizeof(struct RGB));

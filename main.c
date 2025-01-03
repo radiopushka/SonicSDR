@@ -209,8 +209,8 @@ int main(int argn,char* argv[]){
   setup_terminal();
   update_term_size();
 
-  //254
-  init_colors(1275);
+  
+  init_colors(1530);
  
   int pause=0;
   //init_colorpairs();
