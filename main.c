@@ -1,24 +1,26 @@
-#include "fourier.h"
+#include "./FFT/FFT.h"
 #include<stdio.h>
 #include<stdlib.h>
 #include<alsa/asoundlib.h>
 #include "colors/colors.h"
-#include <math.h>
 #include <locale.h>
 #include "alsaconf.c"
 #include "curses/curses.c"
 #include "KEYS.h"
 #include <sys/ioctl.h>
 
+FFT fft;
+
 int SIZE=4000;
 int SKIP=0;
 unsigned int D_SAMPLE=48000;
 int LOWEST_F=11;
 int FFT_SPEED_SPEC=0;
-#define FFT_SPEED_SINGLE 0 
+#define FFT_SPEED_SINGLE 0
 
 int LINES=30;
 int COLS=100;
+
 
 
 char* DEVICE="default";
@@ -31,7 +33,7 @@ char* DEVICE="default";
 //chtype printout[]={' '|COLOR_PAIR((1<<7)|(7&0)<<4|(7&0)),' '|COLOR_PAIR((1<<7)|(7&1)<<4|(7&0)),' '|COLOR_PAIR((1<<7)|(7&3)<<4|(7&0)),' '|COLOR_PAIR((1<<7)|(7&2)<<4|(7&0)),' '|COLOR_PAIR((1<<7)|(7&6)<<4|(7&0)),' '|COLOR_PAIR((1<<7)|(7&4)<<4|(7&0)),' '|COLOR_PAIR((1<<7)|(7&5)<<4|(7&0))};
 
 int print_offset=0;
-double amp=100.0;
+double amp=1.0;
 
 pthread_mutex_t syncm;
 
@@ -49,8 +51,33 @@ void update_term_size(){
     COLS=100;
   }
 }
+int get_freq_at_index(int index){
+    return fft->frequency_map[index];
+}
+
+void f16_array_to_f(short* in,int size,float* buffer,int channels){//size of buffer: size/2
 
 
+  short* end=in+size*channels;
+
+  int c=1;
+  float avg=0;
+
+  for(short* start=in;start<end;start++){
+
+
+    if(c>=channels){
+      *buffer=(avg+*start)/channels;
+      buffer++;
+      c=1;
+      avg=0;
+    }else{
+      avg=(avg+*start);
+      c++;
+    }
+
+  }
+}
 char* getfromdecimal(float ftout){
   int normalization=ftout*amp;
   return get_colored_string(normalization);
@@ -69,7 +96,7 @@ void freescrbuff(){
   screenbuff=NULL;
 }
 int ppsize=0;
-void printspect(float* trans,int size){
+void printspect(double* trans,int size){
   int i=0;
   int i2=0;
   int nsize;
@@ -121,11 +148,11 @@ void printspect(float* trans,int size){
   }
   screenbuff[0][i]=0;
   mvmove(LINES-1,0);
-  printf("gain: %d *=%dHz  ",(int)amp,get_freq_at_index(mouse_pointer-1));
+  printf("gain: %f *=%dHz  amplitude: %f",amp,get_freq_at_index(mouse_pointer-1),trans[mouse_pointer-1]);
   mvmove(0,0);
   printf("%dHz",get_freq_at_index(0));
   mvmove(0,COLS-8);
-  printf("%dHz",get_freq_at_index(get_fourier_size()-1));
+  printf("%dHz",get_freq_at_index(fft->frequencies-1));
 
 }
 
@@ -137,14 +164,27 @@ void free_ft(){
   free(buffer);
   f16convert=NULL;
   buffer=NULL;
-  free_fourier_transform();
+  free_FFT(fft);
+}
+float* make_freq_map(float start,float stop){
+  int size = (COLS-4);
+  float step = (stop - start)/((float)size);
+  float* freq_map=malloc(sizeof(float)*size);
+  float fi = start;
+  for(int i=0;i<size;i++){
+    freq_map[i]=fi;
+    fi = fi+step;
+  }
+  return freq_map;
 }
 double gw;
 int channels=1;
 void init_ft(int argn){
   free(f16convert);
   free(buffer);
-  init_fourier_transform(bsize,start_freq,stop_freq,COLS-4,D_SAMPLE); 
+  float* fmap = make_freq_map(start_freq,stop_freq);
+  fft = create_FFT(fmap, COLS - 4, 5, D_SAMPLE, D_SAMPLE);
+  free(fmap);
 
   f16convert=malloc(sizeof(float)*bsize);
   buffer=malloc(sizeof(short)*bsize*channels);
@@ -152,8 +192,11 @@ void init_ft(int argn){
 }
 void reset_ft(){
   update_term_size();
-  free_fourier_transform();
-  init_fourier_transform(bsize,start_freq,stop_freq,COLS-4,D_SAMPLE); 
+  free_FFT(fft);
+  float* fmap = make_freq_map(start_freq,stop_freq);
+  fft = create_FFT(fmap, COLS - 4, 5, D_SAMPLE, D_SAMPLE);
+  free(fmap);
+
   clear();
 
 }
@@ -165,7 +208,7 @@ int main(int argn,char* argv[]){
   int prev_cols=COLS;
 
   setlocale(LC_ALL, "");
- 
+
   snd_pcm_t *pcm_handle;
 
 
@@ -187,20 +230,20 @@ int main(int argn,char* argv[]){
     SKIP=atoi(argv[4]);
   }
 
-	
- 
+
+
 	if ( snd_pcm_open(&pcm_handle, aup,SND_PCM_STREAM_CAPTURE, 0) < 0){
-		
+
 		printf("unable to open device \n");
 		return 0;
-	} 
+	}
 	if(configure_sound_card(pcm_handle,&D_SAMPLE,&channels)<0){
 		snd_pcm_close(pcm_handle);
     snd_config_update_free_global();
 
 		return 0;
 	}
- 
+
   bsize=SIZE;
   start_freq=D_SAMPLE/bsize;
   stop_freq=D_SAMPLE/2;
@@ -209,9 +252,9 @@ int main(int argn,char* argv[]){
   setup_terminal();
   update_term_size();
 
-  
+
   init_colors(1530);
- 
+
   int pause=0;
   //init_colorpairs();
   //nodelay(stdw, TRUE);
@@ -226,14 +269,14 @@ int main(int argn,char* argv[]){
   mvmove(0,0);
   init_ft(argn);
   int err;
-  float* ppointer;
+  double* ppointer;
   char c=-1;
 
   //pause and start
   int fptog=0;
 
   while(c!='q'){
-    
+
      if ((err = snd_pcm_readi (pcm_handle, buffer, bsize)) ==-EPIPE) {
       free_ft();
       freescrbuff();
@@ -248,10 +291,9 @@ int main(int argn,char* argv[]){
     c=wgetch();
     if(pause > SKIP && fptog == 0){
         f16_array_to_f(buffer,bsize,f16convert,channels);
-        ppointer=produce_period_gram(f16convert);
+        ppointer=calculate_FFT(fft, f16convert, bsize);
 
-      	int psize=get_fourier_size();
-        printspect(ppointer,psize);
+        printspect(ppointer,fft->frequencies);
         mvmove(LINES-1,COLS-sslen-1);
         printf("%s",sdisp);
         pause=0;
@@ -284,7 +326,7 @@ int main(int argn,char* argv[]){
       switch(c){
         case ARROW_UP:
           if(amp<1000)
-            amp++;
+            amp = amp +0.01;
 
           mvmove(LINES/2,COLS/2);
           printf("gain: %d",(int)amp);
@@ -292,7 +334,7 @@ int main(int argn,char* argv[]){
 
         case ARROW_DOWN:
           if(amp > 0)
-            amp--;
+            amp = amp-0.01;
 
           mvmove(LINES/2,COLS/2);
           printf("gain: %d",(int)amp);
@@ -314,16 +356,18 @@ int main(int argn,char* argv[]){
           break;
         case ENTER:
           stop_freq=get_freq_at_index(mouse_pointer-1);
-          if(stop_freq-start_freq < COLS){
-            stop_freq=start_freq+COLS;
+          if(stop_freq-start_freq < 0){
+            stop_freq=D_SAMPLE/2;
+            start_freq=D_SAMPLE/bsize;
           }
           mouse_pointer=1;
           reset_ft();
           break;
         case TAB:
           start_freq=get_freq_at_index(mouse_pointer-1);
-          if(stop_freq-start_freq < COLS){
-            start_freq=stop_freq-COLS;
+          if(stop_freq-start_freq < 0){
+            start_freq=D_SAMPLE/bsize;
+            stop_freq=D_SAMPLE/2;
           }
 
           mouse_pointer=1;
@@ -350,14 +394,14 @@ int main(int argn,char* argv[]){
           fptog=~fptog;
           break;
 
-          
-          
 
-          
+
+
+
       }
       if(c!='q')
         c=wgetch();
-      else 
+      else
         break;
 
       if(mouse_pointer-1==0)
@@ -372,17 +416,18 @@ int main(int argn,char* argv[]){
 
 
   }
-
+  mvmove(0,0);
+  clear();
   free_ft();
   freescrbuff();
   curs();
+  snd_pcm_drop(pcm_handle);
+  snd_pcm_hw_free(pcm_handle);
   snd_pcm_close(pcm_handle);
   snd_config_update_free_global();
   printf("%s\n",get_reset_string());
-  mvmove(0,0);
-  clear();
+
   free_color_info();
-  
   mvmove(1,0);
   printf("alsa sample rate: %d\n",D_SAMPLE);
   mvmove(2,0);
