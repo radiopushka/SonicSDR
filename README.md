@@ -87,6 +87,9 @@ Run the program with the following syntax:
 
 ![music in DSB](https://github.com/radiopushka/SonicSDR/blob/main/Screenshots/2025-01-01_23-16.png)
 
+<img width="1876" height="1108" alt="2025-11-17_01-05" src="https://github.com/user-attachments/assets/5b3c7c2a-d6d3-4396-ad82-6e83efa2a7d1" />
+
+
 ## Issues and Contributions
 
 Feel free to report issues or contribute improvements to the project. Open a pull request or file an issue in the [issues section](https://github.com/radiopushka/SonicSDR/issues).
