@@ -38,6 +38,7 @@ FFT create_FFT(float *frequency_map, int frequencies, int oversampling, int wind
     fft->FFT_array_sine = malloc(sizeof(float*)*window_size);
     for(float** ap = fft->FFT_array_cosine; ap < fft->FFT_array_cosine + window_size; ap++){
         *ap = malloc(sizeof(float)*frequencies);
+
     }
     for(float** ap = fft->FFT_array_sine; ap < fft->FFT_array_sine + window_size; ap++){
         *ap = malloc(sizeof(float)*frequencies);
@@ -80,11 +81,17 @@ FFT create_FFT(float *frequency_map, int frequencies, int oversampling, int wind
 
     fft->itterator = 0;
     fft->cosine_aggregation = malloc(sizeof(float)*frequencies);
+    memset(fft->cosine_aggregation,0,sizeof(float)*frequencies);
     fft->sine_aggregation = malloc(sizeof(float)*frequencies);
+    memset(fft->sine_aggregation,0,sizeof(float)*frequencies);
     fft->fft_aggregation = malloc(sizeof(float)*frequencies);
+    memset(fft->fft_aggregation,0,sizeof(float)*frequencies);
     fft->avg_fft = malloc(sizeof(double)*frequencies);
+    memset(fft->avg_fft,0,sizeof(float)*frequencies);
     fft->acc_fft = malloc(sizeof(double)*frequencies);
+    memset(fft->acc_fft,0,sizeof(float)*frequencies);
     fft->acs_fft = malloc(sizeof(double)*frequencies);
+    memset(fft->acs_fft,0,sizeof(float)*frequencies);
 
     return fft;
 }
